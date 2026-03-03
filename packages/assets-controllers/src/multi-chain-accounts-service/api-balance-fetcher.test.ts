@@ -401,7 +401,7 @@ describe('AccountsApiBalanceFetcher', () => {
       expect(result.balances).toHaveLength(3);
     });
 
-    it('should ignore balances for accounts not included in selected-account requests', async () => {
+    it('should ignore ERC-20 balances for accounts not included in selected-account requests', async () => {
       const responseWithUnexpectedAccount: GetBalancesResponse = {
         count: 1,
         balances: [
@@ -441,7 +441,48 @@ describe('AccountsApiBalanceFetcher', () => {
       ]);
     });
 
-    it('should ignore balances for accounts not included in all-accounts requests', async () => {
+    it('should ignore native balances for accounts not included in selected-account requests', async () => {
+      const responseWithUnexpectedAccount: GetBalancesResponse = {
+        count: 1,
+        balances: [
+          {
+            object: 'token',
+            address: ZERO_ADDRESS,
+            symbol: 'ETH',
+            name: 'Ether',
+            type: 'native',
+            decimals: 18,
+            chainId: 1,
+            balance: '5.0',
+            accountAddress: `eip155:1:${MOCK_ADDRESS_2}`,
+          },
+        ],
+        unprocessedNetworks: [],
+      };
+
+      mockFetchMultiChainBalancesV4.mockResolvedValue(
+        responseWithUnexpectedAccount,
+      );
+
+      const result = await balanceFetcher.fetch({
+        chainIds: [MOCK_CHAIN_ID],
+        queryAllAccounts: false,
+        selectedAccount: MOCK_ADDRESS_1 as ChecksumAddress,
+        allAccounts: MOCK_INTERNAL_ACCOUNTS,
+      });
+
+      expect(result.balances).toStrictEqual([
+        {
+          success: true,
+          value: new BN('0'),
+          account: MOCK_ADDRESS_1,
+          token: ZERO_ADDRESS,
+          chainId: MOCK_CHAIN_ID,
+        },
+      ]);
+    });
+
+    it('should ignore native balances for accounts not included in all-accounts requests', async () => {
       const responseWithUnexpectedAccount: GetBalancesResponse = {
         count: 1,
         balances: [

@@ -279,11 +279,12 @@ export class AccountsApiBalanceFetcher implements BalanceFetcher {
     }
 
     const requestedAccountsLowercase = new Set(
-      (queryAllAccounts
-        ? allAccounts.map(({ address }) => address)
-        : [selectedAccount]
-      ).map((account) => account.toLowerCase()),
+      queryAllAccounts
+        ? allAccounts.map(({ address }) => address.toLowerCase())
+        : [selectedAccount.toLowerCase()],
     );
+    const isAccountIncludedInRequest = (address: string): boolean =>
+      requestedAccountsLowercase.has(address.toLowerCase());
 
     // Let errors propagate to TokenBalancesController for RPC fallback
     // Use timeout to prevent hanging API calls (30 seconds)
@@ -336,7 +337,7 @@ export class AccountsApiBalanceFetcher implements BalanceFetcher {
           return [];
         }
         const account = checksum(addressPart);
-        if (!requestedAccountsLowercase.has(account.toLowerCase())) {
+        if (!isAccountIncludedInRequest(account)) {
           return [];
         }
         const token = checksum(b.address);
@@ -390,8 +391,16 @@ export class AccountsApiBalanceFetcher implements BalanceFetcher {
       chains.forEach((chainId) => {
         const key = `${address}-${chainId}`;
         const existingBalance = nativeBalancesFromAPI.get(key);
+        const isChainIncludedInRequest = chainIds.includes(chainId);
+        const isChainSupported = this.supports(chainId);
+        const isAccountIncluded = isAccountIncludedInRequest(address);
+        const shouldZeroOutBalance =
+          !existingBalance &&
+          isChainIncludedInRequest &&
+          isChainSupported &&
+          isAccountIncluded;
 
-        if (!existingBalance) {
+        if (shouldZeroOutBalance) {
           // Add zero native balance entry if API succeeded but didn't return one
           results.push({
             success: true,
