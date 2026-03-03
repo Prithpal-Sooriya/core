@@ -19,6 +19,7 @@ jest.mock('../AssetsContractController', () => ({
 
 const MOCK_ADDRESS_1 = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045';
 const MOCK_ADDRESS_2 = '0x742d35cc6675c4f17f41140100aa83a4b1fa4c82';
+const MOCK_ADDRESS_3 = '0x1111111111111111111111111111111111111111';
 const MOCK_CHAIN_ID = '0x1' as ChainIdHex;
 const MOCK_UNSUPPORTED_CHAIN_ID = '0x999' as ChainIdHex;
 const ZERO_ADDRESS =
@@ -398,6 +399,106 @@ describe('AccountsApiBalanceFetcher', () => {
       );
 
       expect(result.balances).toHaveLength(3);
+    });
+
+    it('should ignore balances for accounts not included in selected-account requests', async () => {
+      const responseWithUnexpectedAccount: GetBalancesResponse = {
+        count: 1,
+        balances: [
+          {
+            object: 'token',
+            address: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+            symbol: 'DAI',
+            name: 'Dai',
+            decimals: 18,
+            chainId: 1,
+            balance: '10.0',
+            accountAddress: `eip155:1:${MOCK_ADDRESS_2}`,
+          },
+        ],
+        unprocessedNetworks: [],
+      };
+
+      mockFetchMultiChainBalancesV4.mockResolvedValue(
+        responseWithUnexpectedAccount,
+      );
+
+      const result = await balanceFetcher.fetch({
+        chainIds: [MOCK_CHAIN_ID],
+        queryAllAccounts: false,
+        selectedAccount: MOCK_ADDRESS_1 as ChecksumAddress,
+        allAccounts: MOCK_INTERNAL_ACCOUNTS,
+      });
+
+      expect(result.balances).toStrictEqual([
+        {
+          success: true,
+          value: new BN('0'),
+          account: MOCK_ADDRESS_1,
+          token: ZERO_ADDRESS,
+          chainId: MOCK_CHAIN_ID,
+        },
+      ]);
+    });
+
+    it('should ignore balances for accounts not included in all-accounts requests', async () => {
+      const responseWithUnexpectedAccount: GetBalancesResponse = {
+        count: 1,
+        balances: [
+          {
+            object: 'token',
+            address: ZERO_ADDRESS,
+            symbol: 'ETH',
+            name: 'Ether',
+            type: 'native',
+            decimals: 18,
+            chainId: 1,
+            balance: '5.0',
+            accountAddress: `eip155:1:${MOCK_ADDRESS_3}`,
+          },
+        ],
+        unprocessedNetworks: [],
+      };
+
+      mockFetchMultiChainBalancesV4.mockResolvedValue(
+        responseWithUnexpectedAccount,
+      );
+
+      const result = await balanceFetcher.fetch({
+        chainIds: [MOCK_CHAIN_ID],
+        queryAllAccounts: true,
+        selectedAccount: MOCK_ADDRESS_1 as ChecksumAddress,
+        allAccounts: MOCK_INTERNAL_ACCOUNTS,
+      });
+
+      const nativeBalances = result.balances.filter(
+        (balance) => balance.token === ZERO_ADDRESS,
+      );
+
+      expect(nativeBalances).toHaveLength(2);
+      expect(nativeBalances).toStrictEqual(
+        expect.arrayContaining([
+          {
+            success: true,
+            value: new BN('0'),
+            account: MOCK_ADDRESS_1,
+            token: ZERO_ADDRESS,
+            chainId: MOCK_CHAIN_ID,
+          },
+          {
+            success: true,
+            value: new BN('0'),
+            account: MOCK_ADDRESS_2,
+            token: ZERO_ADDRESS,
+            chainId: MOCK_CHAIN_ID,
+          },
+        ]),
+      );
+      expect(
+        result.balances.some(
+          (balance) => balance.account === MOCK_ADDRESS_3.toLowerCase(),
+        ),
+      ).toBe(false);
     });
 
     it('should convert unprocessedNetworks from decimal to hex chain IDs (line 294)', async () => {
@@ -1209,8 +1310,8 @@ describe('AccountsApiBalanceFetcher', () => {
         allAccounts: MOCK_INTERNAL_ACCOUNTS,
       });
 
-      // Should return API balances plus native token guarantee (but no staked balances)
-      expect(result.balances).toHaveLength(3); // Original API results + native token
+      // Should return only balances for the requested account (but no staked balances)
+      expect(result.balances).toHaveLength(2);
       const stakedBalance = result.balances.find(
         (r) => r.token === STAKING_CONTRACT_ADDRESS,
       );

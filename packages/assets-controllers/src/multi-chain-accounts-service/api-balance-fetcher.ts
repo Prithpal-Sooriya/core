@@ -278,6 +278,13 @@ export class AccountsApiBalanceFetcher implements BalanceFetcher {
       return { balances: [] };
     }
 
+    const requestedAccountsLowercase = new Set(
+      (queryAllAccounts
+        ? allAccounts.map(({ address }) => address)
+        : [selectedAccount]
+      ).map((account) => account.toLowerCase()),
+    );
+
     // Let errors propagate to TokenBalancesController for RPC fallback
     // Use timeout to prevent hanging API calls (30 seconds)
     const apiResponse = await safelyExecuteWithTimeout(
@@ -329,6 +336,9 @@ export class AccountsApiBalanceFetcher implements BalanceFetcher {
           return [];
         }
         const account = checksum(addressPart);
+        if (!requestedAccountsLowercase.has(account.toLowerCase())) {
+          return [];
+        }
         const token = checksum(b.address);
         // Use original address for zero address tokens, checksummed for others
         // TODO: this is a hack to get the correct account address type but needs to be fixed

@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - When Accounts API returns networks it cannot process, those networks are automatically added to RPC detection
   - Applies to both `TokenDetectionController` and `TokenBalancesController`
   - Ensures all requested networks are processed even if API has partial support
+- Prevent balances returned for non-requested accounts from being processed by `AccountsApiBalanceFetcher`, avoiding unintended zeroing side effects ([#26707](https://github.com/MetaMask/metamask-mobile/issues/26707))
 
 ## [88.0.0]
 
