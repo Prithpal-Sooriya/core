@@ -416,7 +416,9 @@ describe('HyperLiquidProvider', () => {
 
     it('blocks order signing for an unsupported account', async () => {
       const exchangeClient = createMockExchangeClient();
-      mockClientService.getExchangeClient.mockReturnValue(exchangeClient);
+      mockClientService.getExchangeClient = vi
+        .fn()
+        .mockReturnValue(exchangeClient);
       mockInfoClient.userToMultiSigSigners.mockResolvedValue({
         authorizedUsers: ['0x1234567890123456789012345678901234567890'],
         threshold: 1,
@@ -439,7 +441,9 @@ describe('HyperLiquidProvider', () => {
 
     it('blocks withdrawal signing for an unsupported account', async () => {
       const exchangeClient = createMockExchangeClient();
-      mockClientService.getExchangeClient.mockReturnValue(exchangeClient);
+      mockClientService.getExchangeClient = vi
+        .fn()
+        .mockReturnValue(exchangeClient);
       mockInfoClient.userToMultiSigSigners.mockResolvedValue({
         authorizedUsers: ['0x1234567890123456789012345678901234567890'],
         threshold: 1,
@@ -1645,7 +1649,7 @@ describe('HyperLiquidProvider', () => {
     it('checks support for the account captured by unified account setup', async () => {
       const switchedAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
       const mockExchangeClient = createMockExchangeClient();
-      const userToMultiSigSigners = jest
+      const userToMultiSigSigners = vi
         .fn()
         .mockImplementation(({ user }: { user: string }) =>
           Promise.resolve(
@@ -1659,19 +1663,19 @@ describe('HyperLiquidProvider', () => {
               : null,
           ),
         );
-      const userAbstraction = jest.fn().mockImplementation(async () => {
+      const userAbstraction = vi.fn().mockImplementation(async () => {
         mockWalletService.getUserAddressWithDefault.mockResolvedValue(
           switchedAddress,
         );
         return 'default';
       });
-      mockClientService.getInfoClient = jest.fn().mockReturnValue(
+      mockClientService.getInfoClient = vi.fn().mockReturnValue(
         createMockInfoClient({
           userAbstraction,
           userToMultiSigSigners,
         }),
       );
-      mockClientService.getExchangeClient = jest
+      mockClientService.getExchangeClient = vi
         .fn()
         .mockReturnValue(mockExchangeClient);
 
@@ -1685,7 +1689,7 @@ describe('HyperLiquidProvider', () => {
       });
       expect(mockExchangeClient.agentSetAbstraction).not.toHaveBeenCalled();
       expect(
-        (TradingReadinessCache as jest.Mocked<typeof TradingReadinessCache>)
+        (TradingReadinessCache as Mocked<typeof TradingReadinessCache>)
           .set,
       ).toHaveBeenCalledWith('mainnet', USER_ADDRESS, {
         attempted: true,
