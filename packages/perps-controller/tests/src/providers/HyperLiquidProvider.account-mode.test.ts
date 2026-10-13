@@ -39,6 +39,7 @@ import { createStandaloneInfoClient } from '../../../src/utils/standaloneInfoCli
 import {
   createMockExchangeClient,
   createMockInfoClient,
+  createMockPosition,
 } from '../../helpers/providerMocks.js';
 import {
   createMockInfrastructure,
@@ -1024,12 +1025,12 @@ describe('HyperLiquidProvider', () => {
             switchedAddress,
           );
           return [
-            {
+            createMockPosition({
               symbol: 'BTC',
               size: '1',
               marginUsed: '100',
               leverage: { type: 'isolated', value: 10 },
-            },
+            }),
           ];
         },
       );
@@ -2102,7 +2103,9 @@ describe('HyperLiquidProvider', () => {
           release();
         };
       });
-      mockedCache.get.mockImplementation((network) => cache.get(network));
+      mockedCache.get.mockImplementation((network, _userAddress) =>
+        cache.get(network),
+      );
       mockedCache.set.mockImplementation((network, _user, result) => {
         cache.set(network, result);
       });
