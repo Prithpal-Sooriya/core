@@ -11923,7 +11923,7 @@ describe('HyperLiquidProvider - strategy order types', () => {
       'does not retract a TWAP after its %s changes',
       async (change) => {
         let disconnected: Promise<unknown> | undefined;
-        const twapOrder = jest.fn().mockImplementation(async () => {
+        const twapOrder = vi.fn().mockImplementation(async () => {
           if (change === 'account') {
             mockWalletService.getUserAddressWithDefault.mockResolvedValue(
               '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
@@ -11941,7 +11941,7 @@ describe('HyperLiquidProvider - strategy order types', () => {
             },
           };
         });
-        const twapCancel = jest.fn().mockResolvedValue({
+        const twapCancel = vi.fn().mockResolvedValue({
           status: 'ok',
           response: { type: 'twapCancel', data: { status: 'success' } },
         });
@@ -12025,7 +12025,7 @@ describe('HyperLiquidProvider - strategy order types', () => {
 
     it('does not retract Scale rungs after the venue marks their account unsupported', async () => {
       let disconnected: Promise<unknown> | undefined;
-      const order = jest.fn().mockImplementation(async () => {
+      const order = vi.fn().mockImplementation(async () => {
         disconnected = provider.disconnect();
         await disconnected;
         return {
@@ -12041,7 +12041,7 @@ describe('HyperLiquidProvider - strategy order types', () => {
           },
         };
       });
-      const cancel = jest.fn().mockResolvedValue({
+      const cancel = vi.fn().mockResolvedValue({
         status: 'ok',
         response: { data: { statuses: ['success', 'success'] } },
       });
