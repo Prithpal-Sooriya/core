@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add support for Node.js 26 ([#10981](https://github.com/MetaMask/core/pull/10981))
 
+### Changed
+
+- Bump `bignumber.js` from `^9.1.2` to `^11.1.5` ([#11056](https://github.com/MetaMask/core/pull/11056))
+
 ## [27.1.0]
 
 ### Added
