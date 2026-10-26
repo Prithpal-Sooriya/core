@@ -2,6 +2,8 @@ import type { NetworkClientId } from '@metamask/network-controller';
 import { remove0x } from '@metamask/utils';
 import type { Hex } from '@metamask/utils';
 import { cloneDeep } from 'lodash-es';
+import type { Mocked } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   SimulationResponse,
@@ -41,17 +43,17 @@ import {
 } from './gas.js';
 import { rpcRequest } from './provider.js';
 
-jest.mock('./provider', () => ({
-  ...jest.requireActual('./provider'),
-  rpcRequest: jest.fn(),
+vi.mock(import('./provider.js'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  rpcRequest: vi.fn(),
 }));
 
-jest.mock('./feature-flags');
-jest.mock('../api/simulation-api');
+vi.mock('./feature-flags');
+vi.mock('../api/simulation-api');
 
-jest.mock('./eip7702', () => ({
-  ...jest.requireActual('./eip7702'),
-  generateEIP7702BatchTransaction: jest.fn(),
+vi.mock(import('./eip7702.js'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  generateEIP7702BatchTransaction: vi.fn(),
 }));
 
 const DEFAULT_GAS_ESTIMATE_FALLBACK_MOCK = 35;
@@ -61,7 +63,7 @@ const BLOCK_GAS_LIMIT_MOCK = 123456789;
 const BLOCK_NUMBER_MOCK = '0x5678';
 const NETWORK_CLIENT_ID_MOCK = 'testNetworkClientId' as NetworkClientId;
 const FALLBACK_MULTIPLIER_35_PERCENT = 0.35;
-const GET_SIMULATION_CONFIG_MOCK = jest.fn();
+const GET_SIMULATION_CONFIG_MOCK = vi.fn();
 const MAX_GAS_MULTIPLIER = MAX_GAS_BLOCK_PERCENT / 100;
 const CHAIN_ID_MOCK = '0x123';
 const GAS_2_MOCK = 12345;
@@ -79,7 +81,7 @@ const GAS_MOCK_2 = '0x7a120';
 const UPGRADE_CONTRACT_ADDRESS_MOCK = '0xupgrade123';
 
 const MESSENGER_MOCK = {
-  call: jest.fn().mockImplementation((action: string) => {
+  call: vi.fn().mockImplementation((action: string) => {
     if (action === 'NetworkController:getNetworkClientById') {
       return {
         configuration: { chainId: CHAIN_ID_MOCK },
@@ -102,10 +104,10 @@ const MESSENGER_MOCK = {
       remoteFeatureFlags: {},
     };
   }),
-} as unknown as jest.Mocked<TransactionControllerMessenger>;
+} as unknown as Mocked<TransactionControllerMessenger>;
 
 function mockMessengerCall(): void {
-  const messengerCallMock = jest.mocked(MESSENGER_MOCK.call);
+  const messengerCallMock = vi.mocked(MESSENGER_MOCK.call);
 
   messengerCallMock.mockImplementation((action: string) => {
     if (action === 'NetworkController:getNetworkClientById') {
@@ -238,11 +240,11 @@ function toHex(value: number): Hex {
 }
 
 describe('gas', () => {
-  const rpcRequestMock = jest.mocked(rpcRequest);
-  const simulateTransactionsMock = jest.mocked(simulateTransactions);
-  const getGasEstimateFallbackMock = jest.mocked(getGasEstimateFallback);
-  const getGasEstimateBufferMock = jest.mocked(getGasEstimateBuffer);
-  const generateEIP7702BatchTransactionMock = jest.mocked(
+  const rpcRequestMock = vi.mocked(rpcRequest);
+  const simulateTransactionsMock = vi.mocked(simulateTransactions);
+  const getGasEstimateFallbackMock = vi.mocked(getGasEstimateFallback);
+  const getGasEstimateBufferMock = vi.mocked(getGasEstimateBuffer);
+  const generateEIP7702BatchTransactionMock = vi.mocked(
     generateEIP7702BatchTransaction,
   );
 
@@ -325,7 +327,7 @@ describe('gas', () => {
   }
 
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     mockMessengerCall();
 
     updateGasRequest = cloneDeep(UPDATE_GAS_REQUEST_MOCK);
@@ -349,7 +351,7 @@ describe('gas', () => {
   describe('updateGas', () => {
     describe('sets gas', () => {
       afterEach(() => {
-        // eslint-disable-next-line jest/no-standalone-expect
+        // eslint-disable-next-line vitest/no-standalone-expect
         expect(updateGasRequest.txMeta.defaultGasEstimates?.gas).toBe(
           updateGasRequest.txMeta.txParams.gas,
         );
@@ -1624,7 +1626,7 @@ describe('gas', () => {
 
   describe('estimateGasBatch', () => {
     it('uses EIP-7702 when supported and upgrade required', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: false,
@@ -1689,7 +1691,7 @@ describe('gas', () => {
     });
 
     it('uses EIP-7702 when supported but upgrade not required', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: true,
@@ -1742,7 +1744,7 @@ describe('gas', () => {
       // The bundled 7702 call has no per-tx intrinsic gas cost so the
       // simulated estimate is typically lower than the sum of provided per-tx
       // limits — prefer it when available.
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: true,
@@ -1781,7 +1783,7 @@ describe('gas', () => {
       // simulated standalone (e.g. predict-withdraw, where the batch's first
       // sub-call provides token balance to the rest) rely on this fallback —
       // otherwise simulation reverts and falls back to the block gas limit.
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: true,
@@ -1821,7 +1823,7 @@ describe('gas', () => {
     ] as const)(
       'adds authorization gas to provided gas for %s when estimation fails',
       async (_title, delegationAddress, authorizationGas) => {
-        const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+        const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
           {
             chainId: CHAIN_ID_MOCK,
             delegationAddress,
@@ -1859,7 +1861,7 @@ describe('gas', () => {
     );
 
     it('throws error when upgrade contract address not found', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: false,
@@ -1880,7 +1882,7 @@ describe('gas', () => {
     });
 
     it('uses provided gas limits when all transactions have gas', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([]);
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([]);
 
       const result = await estimateGasBatch({
         networkClientId: NETWORK_CLIENT_ID_MOCK,
@@ -1901,7 +1903,7 @@ describe('gas', () => {
     });
 
     it('simulates gas when not all transactions have gas', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([]);
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([]);
 
       simulateTransactionsMock.mockResolvedValue(
         SIMULATED_TRANSACTIONS_RESPONSE_MOCK,
@@ -1938,7 +1940,7 @@ describe('gas', () => {
     });
 
     it('prefers provided gas over simulated gas when both available', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([]);
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([]);
 
       const customGasValue = toHex(100000);
 
@@ -1975,7 +1977,7 @@ describe('gas', () => {
     });
 
     it('skips EIP-7702 path when account does not support it', async () => {
-      const isAtomicBatchSupportedMock = jest.fn().mockResolvedValue([
+      const isAtomicBatchSupportedMock = vi.fn().mockResolvedValue([
         {
           chainId: CHAIN_ID_MOCK,
           isSupported: true,
@@ -1983,7 +1985,7 @@ describe('gas', () => {
         },
       ]);
 
-      jest.mocked(MESSENGER_MOCK.call).mockImplementation((action: string) => {
+      vi.mocked(MESSENGER_MOCK.call).mockImplementation((action: string) => {
         if (action === 'NetworkController:getNetworkClientById') {
           return {
             configuration: { chainId: CHAIN_ID_MOCK },
